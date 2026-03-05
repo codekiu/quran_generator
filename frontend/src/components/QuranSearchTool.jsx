@@ -1,12 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { BookOpenCheck, Copy, Globe, Info, Loader2, Search } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./ui/Card";
+import { ArrowRight, BookOpenCheck, Copy, Globe, Info, Loader2, Search } from "lucide-react";
 import Button from "./ui/Button";
 import quranChapters from "@/data/quranChapters";
 import { getChapterVerses } from "@/services/quran";
@@ -36,7 +29,7 @@ const clampNumber = (value, min, max) => {
 const STORAGE_PREFIX = "quran-search";
 const buildStorageKey = (suffix) => `${STORAGE_PREFIX}:${suffix}`;
 
-const QuranSearchTool = () => {
+const QuranSearchTool = ({ onSendToSubtitles }) => {
   const [selectedChapter, setSelectedChapter] = usePersistentState(
     buildStorageKey("selectedChapter"),
     1,
@@ -86,6 +79,42 @@ const QuranSearchTool = () => {
     );
   }, [selectedChapterMeta]);
 
+  const buildSurahReference = () => {
+    if (!selectedChapterMeta || !results.length) {
+      return "";
+    }
+
+    const start = results[0].verse;
+    const end = results[results.length - 1].verse;
+    const versesLabel =
+      start === end ? `Ayah ${start}` : `Ayat ${start}-${end}`;
+    return `${selectedChapterMeta.englishName} · ${versesLabel}`;
+  };
+
+  const generateJsonTemplate = () => {
+    if (!results.length) {
+      setError("Fetch verses before generating the JSON template.");
+      return "";
+    }
+
+    const payload = {
+      surah_reference: buildSurahReference(),
+      subtitles: results.map((verse) => ({
+        verse: verse.verse,
+        arabic_text: verse.text,
+        start_time: "",
+        end_time: "",
+        translated_text: verse.translatedText || "",
+        show_verse_number: false,
+      })),
+    };
+
+    const json = JSON.stringify(payload, null, 2);
+    setJsonPayload(json);
+    setJsonCopied(false);
+    return json;
+  };
+
   const handleFetchVerses = async () => {
     setLoading(true);
     setError("");
@@ -122,40 +151,6 @@ const QuranSearchTool = () => {
     }
   };
 
-  const buildSurahReference = () => {
-    if (!selectedChapterMeta || !results.length) {
-      return "";
-    }
-
-    const start = results[0].verse;
-    const end = results[results.length - 1].verse;
-    const versesLabel =
-      start === end ? `Ayah ${start}` : `Ayat ${start}-${end}`;
-    return `${selectedChapterMeta.englishName} · ${versesLabel}`;
-  };
-
-  const generateJsonTemplate = () => {
-    if (!results.length) {
-      setError("Fetch verses before generating the JSON template.");
-      return;
-    }
-
-    const payload = {
-      surah_reference: buildSurahReference(),
-      subtitles: results.map((verse) => ({
-        verse: verse.verse,
-        arabic_text: verse.text,
-        start_time: "",
-        end_time: "",
-        translated_text: verse.translatedText || "",
-        show_verse_number: false,
-      })),
-    };
-
-    setJsonPayload(JSON.stringify(payload, null, 2));
-    setJsonCopied(false);
-  };
-
   const handleCopyJson = async () => {
     if (!jsonPayload) {
       generateJsonTemplate();
@@ -189,6 +184,16 @@ const QuranSearchTool = () => {
     }
   };
 
+  const handleUseTheseVerses = () => {
+    let payload = jsonPayload;
+    if (!payload) {
+      payload = generateJsonTemplate();
+    }
+    if (payload && onSendToSubtitles) {
+      onSendToSubtitles(payload);
+    }
+  };
+
   const handleChapterChange = (event) => {
     setSelectedChapter(Number(event.target.value));
   };
@@ -210,18 +215,18 @@ const QuranSearchTool = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpenCheck className="w-6 h-6" />
-          Quran Verse Finder
-        </CardTitle>
-        <CardDescription>
-          Select any chapter (surah), choose a starting verse and how many
-          verses you want to preview.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <section className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <BookOpenCheck className="w-5 h-5 text-amber-500" />
+          Find Verses
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Select a chapter (surah), choose a verse range, and fetch the authentic Arabic text with translation.
+        </p>
+      </div>
+
+      <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Chapter</label>
@@ -302,7 +307,7 @@ const QuranSearchTool = () => {
         </Button>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
+          <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/40 p-3 text-red-100">
             <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <p className="text-sm">{error}</p>
           </div>
@@ -327,7 +332,7 @@ const QuranSearchTool = () => {
                 {copied ? "Copied!" : "Copy results"}
               </Button>
             </div>
-            <div className="divide-y rounded-lg border">
+            <div className="divide-y divide-border rounded-lg border">
               {results.map((verse) => (
                 <div
                   key={`${selectedChapter}-${verse.verse}`}
@@ -336,12 +341,26 @@ const QuranSearchTool = () => {
                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Ayah {verse.verse}
                   </div>
-                  <p className="text-right text-xl font-semibold leading-relaxed">
+                  <p className="font-arabic text-right text-2xl font-semibold leading-loose">
                     {verse.text}
                   </p>
                 </div>
               ))}
             </div>
+
+            {/* Use These Verses (primary action) */}
+            {onSendToSubtitles && (
+              <Button
+                variant="golden"
+                size="lg"
+                onClick={handleUseTheseVerses}
+                className="w-full"
+              >
+                Use These Verses
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+
             <div className="space-y-2 rounded-lg border border-dashed p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <p className="text-sm font-medium">
@@ -357,6 +376,7 @@ const QuranSearchTool = () => {
                   </Button>
                   <Button
                     size="sm"
+                    variant="ghost"
                     onClick={handleCopyJson}
                     disabled={!jsonPayload}
                   >
@@ -366,7 +386,7 @@ const QuranSearchTool = () => {
                 </div>
               </div>
               {jsonPayload && (
-                <pre className="max-h-80 overflow-auto rounded-md bg-slate-950/5 p-3 text-xs font-mono whitespace-pre-wrap">
+                <pre className="max-h-80 overflow-auto rounded-md bg-secondary p-3 text-xs font-mono whitespace-pre-wrap">
                   {jsonPayload}
                 </pre>
               )}
@@ -382,8 +402,8 @@ const QuranSearchTool = () => {
             You will still need to provide timings when generating videos.
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 };
 

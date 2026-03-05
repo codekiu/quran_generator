@@ -1,10 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Upload, Video, Download, Loader2, Check, AlertCircle, Copy, Play, Pause, Square, Rewind, FastForward } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
+import React, { useState, useMemo } from 'react';
+import { Upload, Video, Download, Loader2, Check, AlertCircle, FileText, Music } from 'lucide-react';
 import Button from './ui/Button';
-import QuranSearchTool from './QuranSearchTool';
 import { videoAPI } from '@/services/api';
-import { formatFileSize, formatTime } from '@/lib/utils';
+import { formatFileSize } from '@/lib/utils';
 import usePersistentState from '@/hooks/usePersistentState';
 
 const VIDEO_FORMAT_OPTIONS = [
@@ -33,18 +31,14 @@ const buildDefaultFormats = () => {
 const buildStorageKey = (suffix) => `${VIDEO_GENERATOR_STORAGE_PREFIX}:${suffix}`;
 
 const VideoGenerator = ({
-  title = 'Video Generator',
-  description = 'Generate Quran recitation videos with Arabic and translated subtitles',
-  icon: IconComponent = Video,
-  enablePlaybackHelper = false,
-  showQuranSearchTool = true,
-  showGenerationTools = true,
+  audioFile: externalAudioFile,
+  onAudioFileChange,
+  subtitlesData,
+  onSubtitlesChange,
+  onNavigateToStep,
 }) => {
-  const [audioFile, setAudioFile] = useState(null);
-  const [subtitlesData, setSubtitlesData] = usePersistentState(
-    buildStorageKey('subtitlesData'),
-    '',
-  );
+  const [internalAudioFile, setInternalAudioFile] = useState(null);
+  const audioFile = externalAudioFile ?? internalAudioFile;
   const [outputName, setOutputName] = usePersistentState(
     buildStorageKey('outputName'),
     'quran_video.mp4',
@@ -62,93 +56,34 @@ const VideoGenerator = ({
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const audioElementRef = useRef(null);
-  const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [copiedTimestamp, setCopiedTimestamp] = useState(false);
-  const [audioHelperError, setAudioHelperError] = useState(null);
   const [selectedFormats, setSelectedFormats] = usePersistentState(
     buildStorageKey('selectedFormats'),
     buildDefaultFormats,
   );
   const [activePreviewProfile, setActivePreviewProfile] = useState('tiktok');
 
-  useEffect(() => {
-    return () => {
-      if (audioPreviewUrl) {
-        URL.revokeObjectURL(audioPreviewUrl);
-      }
-    };
-  }, [audioPreviewUrl]);
+  // Parse subtitles for summary
+  const subtitlesSummary = useMemo(() => {
+    if (!subtitlesData || !subtitlesData.trim()) return null;
+    try {
+      const data = JSON.parse(subtitlesData);
+      if (!data || !Array.isArray(data.subtitles)) return null;
+      return {
+        count: data.subtitles.length,
+        reference: data.surah_reference || '',
+        hasTimes: data.subtitles.some((s) => s.start_time > 0),
+      };
+    } catch {
+      return null;
+    }
+  }, [subtitlesData]);
 
   const handleAudioChange = (e) => {
     const file = e.target.files[0];
-    if (!file) {
-      return;
-    }
-
-    setAudioFile(file);
+    if (!file) return;
+    setInternalAudioFile(file);
+    if (onAudioFileChange) onAudioFileChange(file);
     setError(null);
-
-    if (enablePlaybackHelper) {
-      setAudioHelperError(null);
-      setIsAudioPlaying(false);
-      setCopiedTimestamp(false);
-      setAudioCurrentTime(0);
-      setAudioDuration(0);
-      setAudioPreviewUrl((prevUrl) => {
-        if (prevUrl) {
-          URL.revokeObjectURL(prevUrl);
-        }
-        return URL.createObjectURL(file);
-      });
-    }
-  };
-
-  const handleSubtitlesChange = (e) => {
-    setSubtitlesData(e.target.value);
-    setError(null);
-  };
-
-  const toggleAudioPlayback = () => {
-    if (!enablePlaybackHelper || !audioElementRef.current) return;
-    if (audioElementRef.current.paused) {
-      audioElementRef.current.play();
-    } else {
-      audioElementRef.current.pause();
-    }
-  };
-
-  const stopAudioPlayback = () => {
-    if (!enablePlaybackHelper || !audioElementRef.current) return;
-    audioElementRef.current.pause();
-    audioElementRef.current.currentTime = 0;
-    setIsAudioPlaying(false);
-    setAudioCurrentTime(0);
-  };
-
-  const seekAudio = (deltaSeconds) => {
-    if (!enablePlaybackHelper || !audioElementRef.current) return;
-    const audioNode = audioElementRef.current;
-    const durationLimit = Number.isFinite(audioNode.duration) ? audioNode.duration : Infinity;
-    const nextTime = Math.min(Math.max(audioNode.currentTime + deltaSeconds, 0), durationLimit);
-    audioNode.currentTime = nextTime;
-  };
-
-  const handleCopyCurrentTimestamp = async () => {
-    if (!enablePlaybackHelper || !audioElementRef.current) return;
-
-    try {
-      const seconds = audioElementRef.current.currentTime || 0;
-      await navigator.clipboard.writeText(seconds.toFixed(3));
-      setCopiedTimestamp(true);
-      setAudioHelperError(null);
-      setTimeout(() => setCopiedTimestamp(false), 1500);
-    } catch (err) {
-      setAudioHelperError('Unable to copy the current timestamp.');
-    }
   };
 
   const loadSampleData = () => {
@@ -159,26 +94,28 @@ const VideoGenerator = ({
           "verse": 1,
           "start_time": 0,
           "end_time": 4,
-          "arabic_text": "الم",
+          "arabic_text": "\u0627\u0644\u0645",
           "translated_text": "Alif, Lam, Mim"
         },
         {
           "verse": 2,
           "start_time": 4,
           "end_time": 10,
-          "arabic_text": "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
-          "translated_text": "Ese es el Libro sobre el cual no hay duda; es una guía para los piadosos"
+          "arabic_text": "\u0630\u064e\u0670\u0644\u0650\u0643\u064e \u0627\u0644\u0652\u0643\u0650\u062a\u064e\u0627\u0628\u064f \u0644\u0627 \u0631\u064e\u064a\u0652\u0628\u064e \u06db \u0641\u0650\u064a\u0647\u0650 \u06db \u0647\u064f\u062f\u064b\u0649 \u0644\u0650\u0651\u0644\u0652\u0645\u064f\u062a\u064e\u0651\u0642\u0650\u064a\u0646\u064e",
+          "translated_text": "Ese es el Libro sobre el cual no hay duda; es una gu\u00eda para los piadosos"
         },
         {
           "verse": 3,
           "start_time": 10,
           "end_time": 16,
-          "arabic_text": "الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ",
-          "translated_text": "Quienes creen en lo oculto, cumplen la oración y dan de lo que les hemos proveído"
+          "arabic_text": "\u0627\u0644\u064e\u0651\u0630\u0650\u064a\u0646\u064e \u064a\u064f\u0624\u0652\u0645\u0650\u0646\u064f\u0648\u0646\u064e \u0628\u0650\u0627\u0644\u0652\u063a\u064e\u064a\u0652\u0628\u0650 \u0648\u064e\u064a\u064f\u0642\u0650\u064a\u0645\u064f\u0648\u0646\u064e \u0627\u0644\u0635\u064e\u0651\u0644\u064e\u0627\u0629\u064e \u0648\u064e\u0645\u0650\u0645\u064e\u0651\u0627 \u0631\u064e\u0632\u064e\u0642\u0652\u0646\u064e\u0627\u0647\u064f\u0645\u0652 \u064a\u064f\u0646\u0641\u0650\u0642\u064f\u0648\u0646\u064e",
+          "translated_text": "Quienes creen en lo oculto, cumplen la oraci\u00f3n y dan de lo que les hemos prove\u00eddo"
         }
       ]
     };
-    setSubtitlesData(JSON.stringify(sampleData, null, 2));
+    if (onSubtitlesChange) {
+      onSubtitlesChange(JSON.stringify(sampleData, null, 2));
+    }
   };
 
   const handleGenerate = async () => {
@@ -187,13 +124,12 @@ const VideoGenerator = ({
     setPreviewUrl(null);
     setActivePreviewProfile(null);
 
-    // Validation
     if (!audioFile) {
       setError('Please select an audio file');
       return;
     }
 
-    if (!subtitlesData.trim()) {
+    if (!subtitlesData || !subtitlesData.trim()) {
       setError('Please provide subtitles data');
       return;
     }
@@ -304,341 +240,259 @@ const VideoGenerator = ({
   };
 
   return (
-    <div className="space-y-6">
-      {showQuranSearchTool && <QuranSearchTool />}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <IconComponent className="w-6 h-6" />
-            {title}
-          </CardTitle>
-          <CardDescription>
-            {description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Audio Upload */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Audio File (MP3/WAV)</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".mp3,.wav,.ogg,.m4a"
-                onChange={handleAudioChange}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-              />
-              {audioFile && (
-                <Check className="w-5 h-5 text-green-500" />
+    <section className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Video className="w-5 h-5 text-amber-500" />
+          Generate Video
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Generate Quran recitation videos with Arabic and translated subtitles
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {/* Readiness Summary */}
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <p className="text-sm font-medium">Readiness</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Music className={`h-4 w-4 ${audioFile ? 'text-emerald-400' : 'text-muted-foreground'}`} />
+              {audioFile ? (
+                <span>{audioFile.name} ({formatFileSize(audioFile.size)})</span>
+              ) : (
+                <span className="text-muted-foreground">No audio — upload below</span>
               )}
             </div>
+            <div className="flex items-center gap-2 text-sm">
+              <FileText className={`h-4 w-4 ${subtitlesSummary ? 'text-emerald-400' : 'text-muted-foreground'}`} />
+              {subtitlesSummary ? (
+                <span>
+                  {subtitlesSummary.count} verse{subtitlesSummary.count !== 1 ? 's' : ''}
+                  {subtitlesSummary.reference ? ` · ${subtitlesSummary.reference}` : ''}
+                  {subtitlesSummary.hasTimes ? '' : ' (no timings)'}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onNavigateToStep?.(1)}
+                  className="text-amber-400 hover:text-amber-300 underline underline-offset-2"
+                >
+                  No subtitles — go to Subtitles step
+                </button>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadSampleData}
+          >
+            Load Sample
+          </Button>
+        </div>
+
+        {/* Audio Upload */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Audio File (MP3/WAV)</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              accept=".mp3,.wav,.ogg,.m4a"
+              onChange={handleAudioChange}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+            />
             {audioFile && (
-              <p className="text-xs text-muted-foreground">
-                {audioFile.name} ({formatFileSize(audioFile.size)})
-              </p>
+              <Check className="w-5 h-5 text-emerald-500" />
             )}
           </div>
+          {audioFile && (
+            <p className="text-xs text-muted-foreground">
+              {audioFile.name} ({formatFileSize(audioFile.size)})
+            </p>
+          )}
+        </div>
 
-          {enablePlaybackHelper && (
-            <div className="space-y-3 rounded-xl border border-indigo-200/70 bg-indigo-50/80 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/30">
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-50">Manual Timestamp Helper</p>
-                <p className="text-xs text-indigo-900/70 dark:text-indigo-100/70">
-                  Listen to your recitation, scrub through the audio, and copy the precise timestamp where a verse begins.
+        {/* Format Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Output Formats</label>
+          <div className="grid gap-3 md:grid-cols-2">
+            {VIDEO_FORMAT_OPTIONS.map((option) => {
+              const isSelected = selectedFormats[option.key];
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => handleToggleFormat(option.key)}
+                  className={`rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isSelected
+                      ? 'border-amber-500 bg-amber-900/40 dark:border-amber-400/70'
+                      : 'border-border bg-background hover:border-amber-500/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                    {isSelected && <Check className="h-4 w-4 text-amber-500" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Select at least one format. Separate download buttons will be available for each platform.
+          </p>
+        </div>
+
+        {/* Output Name */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Output Filename</label>
+          <input
+            type="text"
+            value={outputName}
+            onChange={(e) => setOutputName(e.target.value)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+        </div>
+
+        {/* Channel Name / Watermark */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Channel Name / Watermark</label>
+          <input
+            type="text"
+            value={watermarkText}
+            onChange={(e) => setWatermarkText(e.target.value)}
+            placeholder="e.g. @YourChannel (leave empty for no watermark)"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Displayed as a subtle watermark on the video. Leave empty for no watermark.
+          </p>
+        </div>
+
+        {/* Optional Tail Trim */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Trim Tail (seconds)</label>
+          <input
+            type="number"
+            min={0}
+            step="0.1"
+            value={trimTailSeconds}
+            onChange={(e) => setTrimTailSeconds(e.target.value)}
+            placeholder="Leave empty to keep full audio"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Cuts this many seconds from the end of the final video (after generation).
+          </p>
+        </div>
+
+        {/* Generate Button */}
+        <Button
+          onClick={handleGenerate}
+          disabled={loading || !audioFile || !subtitlesData}
+          variant="golden"
+          className="w-full"
+          size="lg"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              Generate Video
+            </>
+          )}
+        </Button>
+
+        {/* Progress/Status */}
+        {progress && (
+          <div className="p-4 rounded-md bg-amber-900/20 text-amber-100">
+            <p className="text-sm">{progress}</p>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="p-4 rounded-md bg-red-900/20 text-red-100 flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Error</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Success Result */}
+        {result?.videos?.length > 0 && (
+          <div className="p-4 rounded-md bg-green-900/20 text-green-100 space-y-4">
+            <div className="flex items-start gap-2">
+              <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold">Videos generated successfully!</p>
+                <p className="text-xs text-green-100/70">
+                  Download the format that best fits each platform.
                 </p>
               </div>
-
-              {audioFile && audioPreviewUrl ? (
-                <div className="space-y-3">
-                  <audio
-                    ref={audioElementRef}
-                    src={audioPreviewUrl}
-                    controls
-                    className="w-full rounded-md border border-indigo-100 bg-white/80 p-2 text-sm shadow-sm dark:border-indigo-500/20 dark:bg-indigo-900/40"
-                    onPlay={() => setIsAudioPlaying(true)}
-                    onPause={() => setIsAudioPlaying(false)}
-                    onEnded={() => setIsAudioPlaying(false)}
-                    onTimeUpdate={(event) => setAudioCurrentTime(event.target.currentTime)}
-                    onLoadedMetadata={(event) => setAudioDuration(event.target.duration || 0)}
-                  />
-                  <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                    <div className="text-sm text-indigo-900 dark:text-indigo-50">
-                      <p className="font-mono">
-                        Current: {formatTime(audioCurrentTime)} ({audioCurrentTime.toFixed(3)}s)
-                      </p>
-                      {audioDuration > 0 && (
-                        <p className="text-xs text-indigo-900/70 dark:text-indigo-100/70">
-                          Duration: {formatTime(audioDuration)} ({audioDuration.toFixed(3)}s)
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 justify-end">
-                      <Button variant="outline" size="sm" onClick={() => seekAudio(-5)}>
-                        <Rewind className="mr-2 h-4 w-4" />
-                        -5s
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={toggleAudioPlayback}>
-                        {isAudioPlaying ? (
-                          <>
-                            <Pause className="mr-2 h-4 w-4" />
-                            Pause
-                          </>
-                        ) : (
-                          <>
-                            <Play className="mr-2 h-4 w-4" />
-                            Play
-                          </>
-                        )}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={stopAudioPlayback}>
-                        <Square className="mr-2 h-4 w-4" />
-                        Stop
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => seekAudio(5)}>
-                        <FastForward className="mr-2 h-4 w-4" />
-                        +5s
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      variant="secondary"
-                      className="flex-1 sm:flex-none"
-                      onClick={handleCopyCurrentTimestamp}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      {copiedTimestamp ? 'Copied!' : 'Copy Current Timestamp'}
-                    </Button>
-                    <p className="text-xs text-indigo-900/80 dark:text-indigo-100/70">
-                      Copies the current playback position (in seconds with milliseconds) to your clipboard.
+            </div>
+            <div className="space-y-3">
+              {result.videos.map((video) => (
+                <div
+                  key={`${video.profile}-${video.video_filename}`}
+                  className="flex flex-col gap-2 rounded-lg border border-green-500/30 bg-green-950/20 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{video.label || video.profile}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {video.profile?.toUpperCase()} · {formatFileSize(video.video_size)}
                     </p>
                   </div>
+                  <Button variant="outline" onClick={() => handleDownload(video)} className="w-full sm:w-auto">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download {video.profile === 'youtube' ? 'YouTube' : 'TikTok'}
+                  </Button>
                 </div>
-              ) : (
-                <p className="text-xs text-indigo-900/80 dark:text-indigo-50/80">
-                  Upload an audio file to unlock playback controls.
-                </p>
-              )}
-              {audioHelperError && (
-                <div className="rounded-md border border-red-200/70 bg-red-50/80 p-2 text-xs text-red-900 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-100">
-                  {audioHelperError}
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Video Preview */}
+        {previewUrl && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="text-sm font-medium">Preview</label>
+              {result?.videos?.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {result.videos.map((video) => (
+                    <Button
+                      key={`preview-${video.profile}`}
+                      variant={activePreviewProfile === video.profile ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSelectPreview(video)}
+                    >
+                      {video.profile === 'youtube' ? 'YouTube' : 'TikTok'}
+                    </Button>
+                  ))}
                 </div>
               )}
             </div>
-          )}
-
-          {showGenerationTools && (
-            <>
-              {/* Subtitles Input */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Subtitles (JSON)</label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={loadSampleData}
-                  >
-                    Load Sample
-                  </Button>
-                </div>
-                <textarea
-                  value={subtitlesData}
-                  onChange={handleSubtitlesChange}
-                  placeholder='{"surah_reference": "Al-Baqarah · Ayat 1-3", "subtitles": [{"verse": 1, "start_time": 0, "end_time": 4, "arabic_text": "...", "translated_text": "..."}]}'
-                  className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Provide a JSON object with a global surah_reference string and a subtitles array (each item keeps verse, start_time, end_time, arabic_text, translated_text)
-                </p>
-              </div>
-
-              {/* Format Selection */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Output Formats</label>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {VIDEO_FORMAT_OPTIONS.map((option) => {
-                    const isSelected = selectedFormats[option.key];
-                    return (
-                      <button
-                        key={option.key}
-                        type="button"
-                        onClick={() => handleToggleFormat(option.key)}
-                        className={`rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400/70 dark:bg-indigo-900/40'
-                            : 'border-border bg-background hover:border-indigo-200 dark:bg-slate-900'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-semibold">{option.label}</p>
-                            <p className="text-xs text-muted-foreground">{option.description}</p>
-                          </div>
-                          {isSelected && <Check className="h-4 w-4 text-indigo-600" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Select at least one format. Separate download buttons will be available for each platform.
-                </p>
-              </div>
-
-              {/* Timestamp Helper */}
-              
-
-              {/* Output Name */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Output Filename</label>
-                <input
-                  type="text"
-                  value={outputName}
-                  onChange={(e) => setOutputName(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-
-
-
-              {/* Channel Name / Watermark */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Channel Name / Watermark</label>
-                <input
-                  type="text"
-                  value={watermarkText}
-                  onChange={(e) => setWatermarkText(e.target.value)}
-                  placeholder="e.g. @YourChannel (leave empty for no watermark)"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Displayed as a subtle watermark on the video. Leave empty for no watermark.
-                </p>
-              </div>
-
-              {/* Optional Tail Trim */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Trim Tail (seconds)</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={trimTailSeconds}
-                  onChange={(e) => setTrimTailSeconds(e.target.value)}
-                  placeholder="Leave empty to keep full audio"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Cuts this many seconds from the end of the final video (after generation).
-                </p>
-              </div>
-
-              {/* Generate Button */}
-              <Button
-                onClick={handleGenerate}
-                disabled={loading || !audioFile || !subtitlesData}
-                className="w-full"
-                size="lg"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Generate Video
-                  </>
-                )}
-              </Button>
-
-              {/* Progress/Status */}
-              {progress && (
-                <div className="p-4 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100">
-                  <p className="text-sm">{progress}</p>
-                </div>
-              )}
-
-              {/* Error */}
-              {error && (
-                <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Error</p>
-                    <p className="text-sm">{error}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Success Result */}
-              {result?.videos?.length > 0 && (
-                <div className="p-4 rounded-md bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100 space-y-4">
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold">Videos generated successfully!</p>
-                      <p className="text-xs text-green-900/80 dark:text-green-100/70">
-                        Download the format that best fits each platform.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {result.videos.map((video) => (
-                      <div
-                        key={`${video.profile}-${video.video_filename}`}
-                        className="flex flex-col gap-2 rounded-lg border border-green-200/70 bg-white/80 p-3 text-sm shadow-sm dark:border-green-500/30 dark:bg-green-950/20 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div>
-                          <p className="font-medium">{video.label || video.profile}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {video.profile?.toUpperCase()} · {formatFileSize(video.video_size)}
-                          </p>
-                        </div>
-                        <Button variant="outline" onClick={() => handleDownload(video)} className="w-full sm:w-auto">
-                          <Download className="mr-2 h-4 w-4" />
-                          Download {video.profile === 'youtube' ? 'YouTube' : 'TikTok'}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Video Preview */}
-              {previewUrl && (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-sm font-medium">Preview</label>
-                    {result?.videos?.length > 1 && (
-                      <div className="flex flex-wrap gap-2">
-                        {result.videos.map((video) => (
-                          <Button
-                            key={`preview-${video.profile}`}
-                            variant={activePreviewProfile === video.profile ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleSelectPreview(video)}
-                          >
-                            {video.profile === 'youtube' ? 'YouTube' : 'TikTok'}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <video
-                    controls
-                    className="w-full rounded-md border"
-                    src={previewUrl}
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
-              )}
-
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            <video
+              controls
+              className="w-full rounded-md border"
+              src={previewUrl}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 
