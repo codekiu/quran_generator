@@ -1,0 +1,104 @@
+Quran Video Generator - Project Structure
+==========================================
+
+quran_generator/
+│
+├── 📚 Documentation
+│   ├── README.md                  # Complete documentation
+│   ├── QUICKSTART.md             # 5-minute setup guide
+│   ├── PROJECT_SUMMARY.md        # This project overview
+│   ├── STRUCTURE.txt             # This file
+│   ├── context.md                # Technical architecture
+│   ├── tasks.md                  # Feature tracking
+│   └── progress.md               # Development log
+│
+├── 🔧 Configuration
+│   ├── .gitignore                # Git ignore rules
+│   ├── INSTALL.sh                # Automated installer
+│   └── sample_subtitles.json    # Example subtitle data
+│
+├── 🐍 Backend (Python/Flask)
+│   └── backend/
+│       ├── app.py                # Flask server (9 API endpoints)
+│       ├── video_generator.py    # Video generation logic
+│       ├── audio_editor.py       # Audio processing logic
+│       ├── requirements.txt      # Python dependencies
+│       ├── .env.example          # Environment template
+│       ├── .gitignore            # Backend ignore rules
+│       └── fonts/
+│           └── README.md         # Font installation guide
+│
+├── ⚛️  Frontend (React/Vite)
+│   └── frontend/
+│       ├── index.html            # Entry HTML
+│       ├── package.json          # Node dependencies
+│       ├── vite.config.js        # Vite configuration
+│       ├── tailwind.config.js    # TailwindCSS config
+│       ├── postcss.config.js     # PostCSS config
+│       ├── .gitignore            # Frontend ignore rules
+│       └── src/
+│           ├── main.jsx          # React entry point
+│           ├── index.css         # Global styles
+│           ├── App.jsx           # Main application
+│           ├── components/
+│           │   ├── VideoGenerator.jsx   # Video generation UI
+│           │   ├── AudioEditor.jsx      # Audio editing UI
+│           │   └── ui/
+│           │       ├── Button.jsx       # Button component
+│           │       └── Card.jsx         # Card component
+│           ├── services/
+│           │   └── api.js               # API client
+│           └── lib/
+│               └── utils.js             # Utility functions
+│
+└── 📁 Data Directories (auto-created)
+    ├── uploads/              # Temporary file uploads
+    ├── outputs/              # Generated videos & audio
+    └── temp/                 # Processing temporary files
+
+Key Files by Size:
+------------------
+app.py                 12,746 bytes  (Main Flask server)
+audio_editor.py        10,565 bytes  (Audio processing)
+video_generator.py      9,830 bytes  (Video generation)
+README.md               7,807 bytes  (Documentation)
+PROJECT_SUMMARY.md      8,500+ bytes (This summary)
+progress.md             5,398 bytes  (Dev log)
+tasks.md                3,796 bytes  (Task tracking)
+context.md              3,905 bytes  (Technical docs)
+QUICKSTART.md           3,385 bytes  (Quick start)
+sample_subtitles.json   1,806 bytes  (Sample data)
+
+Technologies Used:
+------------------
+Backend:
+  - Python 3.9+
+  - Flask (web server)
+  - FFmpeg (video encoding)
+  - Pillow (image processing)
+  - arabic-reshaper (text reshaping)
+  - python-bidi (RTL support)
+  - pydub (audio processing)
+
+Frontend:
+  - React 18
+  - Vite (build tool)
+  - TailwindCSS (styling)
+  - wavesurfer.js (audio visualization)
+  - Axios (HTTP client)
+  - Lucide React (icons)
+
+API Endpoints:
+--------------
+GET  /api/health              - Health check
+POST /api/generate-video      - Generate video
+GET  /api/video/:filename     - Download video
+POST /api/test-arabic         - Test Arabic rendering
+GET  /api/image/:filename     - Get test image
+POST /api/audio/info          - Get audio metadata
+POST /api/audio/trim          - Trim audio file
+GET  /api/audio/:filename     - Download audio
+POST /api/audio/waveform      - Get waveform data
+
+Total Lines of Code: ~2,500+
+Total Documentation: 30,000+ words

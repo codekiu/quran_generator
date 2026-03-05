@@ -1,0 +1,23 @@
+# Uploads, outputs, and temporary files
+uploads/
+outputs/
+temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store

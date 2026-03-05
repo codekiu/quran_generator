@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Cleaning Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        .upload-section:hover {
+            border-color: #007bff;
+        }
+        .file-input {
+            margin: 10px 0;
+        }
+        .options-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .option-group {
+            margin-bottom: 15px;
+        }
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .option-group input, .option-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result-section {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result-section.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result-section.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .audio-player {
+            margin-top: 15px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .api-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-container input[type="range"] {
+            flex: 1;
+        }
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕌 Audio Cleaning Test</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Clean mosque recordings from background noise and poor microphone quality
+        </p>
+
+        <div class="api-info">
+            <strong>Endpoint:</strong> POST /api/audio/clean<br>
+            <strong>Purpose:</strong> Remove background noise, enhance voice clarity, and normalize audio levels for mosque recordings
+        </div>
+
+        <form id="audioForm">
+            <div class="upload-section">
+                <h3>📁 Upload Audio File</h3>
+                <p>Supported formats: MP3, WAV, OGG, M4A, AAC</p>
+                <input type="file" id="audioFile" accept=".mp3,.wav,.ogg,.m4a,.aac" required class="file-input">
+                <div id="fileInfo" style="margin-top: 10px; color: #666;"></div>
+            </div>
+
+            <div class="options-section">
+                <h3>⚙️ Cleaning Options</h3>
+                
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="noiseReduction" checked>
+                        <label for="noiseReduction">Noise Reduction</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="equalize" checked>
+                        <label for="equalize">Voice Equalization</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="normalize" checked>
+                        <label for="normalize">Audio Normalization</label>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <label for="noiseLevel">Noise Reduction Level</label>
+                    <div class="slider-container">
+                        <input type="range" id="noiseLevel" min="0" max="1" step="0.01" value="0.21">
+                        <span class="slider-value" id="noiseLevelValue">0.21</span>
+                    </div>
+                    <small style="color: #666;">0.0 = none, 1.0 = maximum</small>
+                </div>
+
+                <div class="option-group">
+                    <label for="highpassFreq">High-Pass Filter (Hz)</label>
+                    <input type="number" id="highpassFreq" value="80" min="0" max="20000">
+                    <small style="color: #666;">Removes low-frequency rumble (AC, fans)</small>
+                </div>
+
+                <div class="option-group">
+                    <label for="lowpassFreq">Low-Pass Filter (Hz)</label>
+                    <input type="number" id="lowpassFreq" value="8000" min="0" max="20000">
+                    <small style="color: #666;">Removes high-frequency hiss</small>
+                </div>
+
+                <div class="option-group">
+                    <label for="outputName">Output Filename (optional)</label>
+                    <input type="text" id="outputName" placeholder="cleaned_recording.mp3">
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                🎧 Clean Audio
+            </button>
+        </form>
+
+        <div id="resultSection" class="result-section">
+            <h3 id="resultTitle"></h3>
+            <div id="resultMessage"></div>
+            <div id="audioPlayer" class="audio-player"></div>
+            <div id="processingDetails"></div>
+        </div>
+    </div>
+
+    <script>
+        // Update slider value display
+        document.getElementById('noiseLevel').addEventListener('input', function(e) {
+            document.getElementById('noiseLevelValue').textContent = e.target.value;
+        });
+
+        // Show file info when selected
+        document.getElementById('audioFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const fileInfo = document.getElementById('fileInfo');
+            if (file) {
+                const sizeInMB = (file.size / 1024 / 1024).toFixed(2);
+                fileInfo.textContent = `📄 ${file.name} (${sizeInMB} MB)`;
+            } else {
+                fileInfo.textContent = '';
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('audioForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('audioFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an audio file');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const resultSection = document.getElementById('resultSection');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            const audioPlayer = document.getElementById('audioPlayer');
+            const processingDetails = document.getElementById('processingDetails');
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Processing...';
+
+            // Show loading state
+            resultSection.style.display = 'block';
+            resultSection.className = 'result-section loading';
+            resultTitle.textContent = 'Processing...';
+            resultMessage.textContent = 'Cleaning your audio file. This may take a few minutes...';
+            audioPlayer.innerHTML = '';
+            processingDetails.innerHTML = '';
+
+            try {
+                // Create FormData
+                const formData = new FormData();
+                formData.append('audio', file);
+                
+                // Add optional parameters
+                formData.append('noise_reduction', document.getElementById('noiseReduction').checked);
+                formData.append('equalize', document.getElementById('equalize').checked);
+                formData.append('normalize', document.getElementById('normalize').checked);
+                formData.append('noise_reduction_level', document.getElementById('noiseLevel').value);
+                formData.append('highpass_freq', document.getElementById('highpassFreq').value);
+                formData.append('lowpass_freq', document.getElementById('lowpassFreq').value);
+                
+                const outputName = document.getElementById('outputName').value.trim();
+                if (outputName) {
+                    formData.append('output_name', outputName);
+                }
+
+                // Send request
+                const response = await fetch('/api/audio/clean', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Success
+                    resultSection.className = 'result-section success';
+                    resultTitle.textContent = '✅ Audio Cleaned Successfully!';
+                    resultMessage.innerHTML = `
+                        <p><strong>Filename:</strong> ${result.output_filename}</p>
+                        <p><strong>Duration:</strong> ${result.audio_info.duration.toFixed(2)} seconds</p>
+                        <p><strong>Size:</strong> ${(result.audio_info.duration_ms * 192000 / 8 / 1024 / 1024).toFixed(2)} MB (estimated)</p>
+                        <p><strong>Download:</strong> <a href="${result.cleaned_audio_url}" download>Click here to download</a></p>
+                    `;
+
+                    // Audio player
+                    audioPlayer.innerHTML = `
+                        <h4>🎧 Preview Cleaned Audio:</h4>
+                        <audio controls style="width: 100%; margin-top: 10px;">
+                            <source src="${result.cleaned_audio_url}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    `;
+
+                    // Processing details
+                    const details = result.processing_details;
+                    processingDetails.innerHTML = `
+                        <h4>⚙️ Processing Details:</h4>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Noise Reduction: ${details.noise_reduction ? '✅ Enabled' : '❌ Disabled'}</li>
+                            <li>Voice Equalization: ${details.equalize ? '✅ Enabled' : '❌ Disabled'}</li>
+                            <li>Audio Normalization: ${details.normalize ? '✅ Enabled' : '❌ Disabled'}</li>
+                            <li>Noise Reduction Level: ${details.noise_reduction_level}</li>
+                            <li>High-Pass Filter: ${details.highpass_freq} Hz</li>
+                            <li>Low-Pass Filter: ${details.lowpass_freq} Hz</li>
+                        </ul>
+                    `;
+                } else {
+                    // Error
+                    resultSection.className = 'result-section error';
+                    resultTitle.textContent = '❌ Error';
+                    resultMessage.textContent = result.error || 'An unknown error occurred';
+                }
+
+            } catch (error) {
+                resultSection.className = 'result-section error';
+                resultTitle.textContent = '❌ Network Error';
+                resultMessage.textContent = `Failed to connect to server: ${error.message}`;
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🎧 Clean Audio';
+            }
+        });
+    </script>
+</body>
+</html>
