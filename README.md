@@ -2,6 +2,10 @@
 
 Generate social media videos with Quran recitations featuring synchronized Arabic and Spanish subtitles. Supports TikTok/Reels (1080x1920) and YouTube (1920x1080) video profiles.
 
+## Example Output
+
+[![Example Video](https://img.youtube.com/vi/E3nEKkBIy8k/0.jpg)](https://www.youtube.com/shorts/E3nEKkBIy8k)
+
 ## Features
 
 - **Video generation** with multiple profiles (TikTok 1080x1920, YouTube 1920x1080)
