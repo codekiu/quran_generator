@@ -202,7 +202,7 @@ Backend environment variables (`backend/.env`):
 
 ## License
 
-This project is for educational and personal use.
+MIT License — free to use, modify, and distribute. Spread the Quran everywhere.
 
 ## Acknowledgments
 
