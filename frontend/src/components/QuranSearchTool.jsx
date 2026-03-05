@@ -131,6 +131,7 @@ const QuranSearchTool = () => {
         start_time: "",
         end_time: "",
         spanish_text: verse.spanishText || "",
+        show_verse_number: false,
       })),
     };
 

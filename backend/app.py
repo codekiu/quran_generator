@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import urllib.request
 from pathlib import Path
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -121,10 +122,28 @@ def _load_qpc_hafs_dataset():
 QURAN_SURAH_DATA = _load_qpc_hafs_dataset()
 
 
+def _fetch_spanish_translation(surah_number):
+    """Fetch Spanish (Julio Cortes) translation from alquran.cloud API."""
+    url = f"https://api.alquran.cloud/v1/surah/{surah_number}/es.cortes"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "QuranGenerator/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            api_data = json.loads(resp.read().decode("utf-8"))
+        ayahs = api_data.get("data", {}).get("ayahs", [])
+        return {f"verse_{a['numberInSurah']}": a.get("text", "") for a in ayahs}
+    except Exception as e:
+        print(f"Warning: Could not fetch Spanish translation for surah {surah_number}: {e}")
+        return {}
+
+
 def get_surah_with_cache(chapter_number):
     data = QURAN_SURAH_DATA.get(int(chapter_number))
     if data is None:
         raise ValueError(f"Surah {chapter_number} not found in qpc-hafs dataset")
+
+    if not data["translation"]:
+        data["translation"] = _fetch_spanish_translation(int(chapter_number))
+
     return data
 
 
