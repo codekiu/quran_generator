@@ -3,7 +3,7 @@ import { Upload, Video, Download, Loader2, Check, AlertCircle, Copy, Play, Pause
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
 import QuranSearchTool from './QuranSearchTool';
-import { videoAPI, audioAPI } from '@/services/api';
+import { videoAPI } from '@/services/api';
 import { formatFileSize, formatTime } from '@/lib/utils';
 import usePersistentState from '@/hooks/usePersistentState';
 
@@ -30,18 +30,11 @@ const buildDefaultFormats = () => {
   return initial;
 };
 
-const getDefaultTimestampParams = () => ({
-  min_silence_len: 700,
-  silence_thresh: -40,
-  padding: 200,
-  max_segments: '',
-});
-
 const buildStorageKey = (suffix) => `${VIDEO_GENERATOR_STORAGE_PREFIX}:${suffix}`;
 
 const VideoGenerator = ({
   title = 'Video Generator',
-  description = 'Generate Quran recitation videos with Arabic and Spanish subtitles',
+  description = 'Generate Quran recitation videos with Arabic and translated subtitles',
   icon: IconComponent = Video,
   enablePlaybackHelper = false,
   showQuranSearchTool = true,
@@ -60,19 +53,15 @@ const VideoGenerator = ({
     buildStorageKey('trimTailSeconds'),
     '',
   );
+  const [watermarkText, setWatermarkText] = usePersistentState(
+    buildStorageKey('watermarkText'),
+    '',
+  );
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [timestampParams, setTimestampParams] = usePersistentState(
-    buildStorageKey('timestampParams'),
-    getDefaultTimestampParams,
-  );
-  const [timestampResult, setTimestampResult] = useState(null);
-  const [timestampLoading, setTimestampLoading] = useState(false);
-  const [timestampError, setTimestampError] = useState(null);
-  const [copiedIndex, setCopiedIndex] = useState(null);
   const audioElementRef = useRef(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
@@ -102,9 +91,6 @@ const VideoGenerator = ({
 
     setAudioFile(file);
     setError(null);
-    setTimestampResult(null);
-    setTimestampError(null);
-    setCopiedIndex(null);
 
     if (enablePlaybackHelper) {
       setAudioHelperError(null);
@@ -124,43 +110,6 @@ const VideoGenerator = ({
   const handleSubtitlesChange = (e) => {
     setSubtitlesData(e.target.value);
     setError(null);
-  };
-
-  const handleTimestampParamChange = (field, value) => {
-    setTimestampParams((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleExtractTimestamps = async () => {
-    if (!audioFile) {
-      setTimestampError('Please upload an audio file first');
-      return;
-    }
-
-    setTimestampLoading(true);
-    setTimestampError(null);
-    setCopiedIndex(null);
-
-    try {
-      const response = await audioAPI.detectTimestamps(audioFile, timestampParams);
-      setTimestampResult(response);
-    } catch (err) {
-      setTimestampError(err.response?.data?.error || err.message || 'Failed to detect timestamps');
-    } finally {
-      setTimestampLoading(false);
-    }
-  };
-
-  const handleCopySegment = async (segment, index) => {
-    const payload = `"start_time": "${segment.start_time.toFixed(3)}",
-"end_time": "${segment.end_time.toFixed(3)},"`;
-
-    try {
-      await navigator.clipboard.writeText(payload);
-      setCopiedIndex(index);
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      setTimestampError('Unable to copy segment to clipboard.');
-    }
   };
 
   const toggleAudioPlayback = () => {
@@ -211,21 +160,21 @@ const VideoGenerator = ({
           "start_time": 0,
           "end_time": 4,
           "arabic_text": "الم",
-          "spanish_text": "Alif, Lam, Mim"
+          "translated_text": "Alif, Lam, Mim"
         },
         {
           "verse": 2,
           "start_time": 4,
           "end_time": 10,
           "arabic_text": "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
-          "spanish_text": "Ese es el Libro sobre el cual no hay duda; es una guía para los piadosos"
+          "translated_text": "Ese es el Libro sobre el cual no hay duda; es una guía para los piadosos"
         },
         {
           "verse": 3,
           "start_time": 10,
           "end_time": 16,
           "arabic_text": "الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ",
-          "spanish_text": "Quienes creen en lo oculto, cumplen la oración y dan de lo que les hemos proveído"
+          "translated_text": "Quienes creen en lo oculto, cumplen la oración y dan de lo que les hemos proveído"
         }
       ]
     };
@@ -296,6 +245,7 @@ const VideoGenerator = ({
     try {
       const response = await videoAPI.generateVideo(audioFile, payload, outputName, {
         trim_end_seconds: parsedTrimSeconds,
+        watermark_text: watermarkText,
         'profiles[]': requestedProfiles,
       });
       const normalizedVideos = (Array.isArray(response.videos) && response.videos.length > 0
@@ -493,11 +443,11 @@ const VideoGenerator = ({
                 <textarea
                   value={subtitlesData}
                   onChange={handleSubtitlesChange}
-                  placeholder='{"surah_reference": "Al-Baqarah · Ayat 1-3", "subtitles": [{"verse": 1, "start_time": 0, "end_time": 4, "arabic_text": "...", "spanish_text": "..."}]}'
+                  placeholder='{"surah_reference": "Al-Baqarah · Ayat 1-3", "subtitles": [{"verse": 1, "start_time": 0, "end_time": 4, "arabic_text": "...", "translated_text": "..."}]}'
                   className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Provide a JSON object with a global surah_reference string and a subtitles array (each item keeps verse, start_time, end_time, arabic_text, spanish_text)
+                  Provide a JSON object with a global surah_reference string and a subtitles array (each item keeps verse, start_time, end_time, arabic_text, translated_text)
                 </p>
               </div>
 
@@ -549,6 +499,21 @@ const VideoGenerator = ({
               </div>
 
 
+
+              {/* Channel Name / Watermark */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Channel Name / Watermark</label>
+                <input
+                  type="text"
+                  value={watermarkText}
+                  onChange={(e) => setWatermarkText(e.target.value)}
+                  placeholder="e.g. @YourChannel (leave empty for no watermark)"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Displayed as a subtle watermark on the video. Leave empty for no watermark.
+                </p>
+              </div>
 
               {/* Optional Tail Trim */}
               <div className="space-y-2">
@@ -669,123 +634,6 @@ const VideoGenerator = ({
                 </div>
               )}
 
-              <div className="space-y-4 rounded-xl border border-emerald-200/70 bg-emerald-50/80 p-4 dark:border-emerald-600/30 dark:bg-emerald-950/40">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Extract Timestamps</p>
-                  <p className="text-xs text-emerald-900/70 dark:text-emerald-100/70">
-                    Detect non-silent segments from your audio and paste them into your subtitles JSON.
-                  </p>
-                </div>
-                <div className="grid gap-3 md:grid-cols-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium uppercase tracking-wide text-emerald-900/80 dark:text-emerald-100/70">
-                      Min Silence (ms)
-                    </label>
-                    <input
-                      type="number"
-                      min={100}
-                      step={50}
-                      value={timestampParams.min_silence_len}
-                      onChange={(e) => handleTimestampParamChange('min_silence_len', e.target.value)}
-                      className="w-full rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-emerald-500/20 dark:bg-emerald-900/30 dark:text-emerald-50"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium uppercase tracking-wide text-emerald-900/80 dark:text-emerald-100/70">
-                      Silence Threshold (dB)
-                    </label>
-                    <input
-                      type="number"
-                      step={1}
-                      value={timestampParams.silence_thresh}
-                      onChange={(e) => handleTimestampParamChange('silence_thresh', e.target.value)}
-                      className="w-full rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-emerald-500/20 dark:bg-emerald-900/30 dark:text-emerald-50"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium uppercase tracking-wide text-emerald-900/80 dark:text-emerald-100/70">
-                      Padding (ms)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={50}
-                      value={timestampParams.padding}
-                      onChange={(e) => handleTimestampParamChange('padding', e.target.value)}
-                      className="w-full rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-emerald-500/20 dark:bg-emerald-900/30 dark:text-emerald-50"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium uppercase tracking-wide text-emerald-900/80 dark:text-emerald-100/70">
-                      Max Segments
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      placeholder="(optional)"
-                      value={timestampParams.max_segments}
-                      onChange={(e) => handleTimestampParamChange('max_segments', e.target.value)}
-                      className="w-full rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-emerald-500/20 dark:bg-emerald-900/30 dark:text-emerald-50"
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleExtractTimestamps}
-                  disabled={timestampLoading}
-                  variant="secondary"
-                  className="w-full"
-                >
-                  {timestampLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Detecting...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Extract Timestamps
-                    </>
-                  )}
-                </Button>
-                {timestampError && (
-                  <div className="rounded-md border border-red-200/70 bg-red-50/90 p-3 text-sm text-red-900 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-100">
-                    {timestampError}
-                  </div>
-                )}
-                {timestampResult?.segments?.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs text-emerald-900/80 dark:text-emerald-100/80">
-                      <span>
-                        {timestampResult.total_segments} segments · Audio duration {timestampResult.audio_duration?.toFixed?.(2) ?? timestampResult.audio_duration}s
-                      </span>
-                      <span>Padding {timestampResult.padding} ms</span>
-                    </div>
-                    <div className="divide-y rounded-xl border border-emerald-200/70 bg-white/80 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-950/30">
-                      {timestampResult.segments.map((segment, index) => (
-                        <div key={`${segment.start_time}-${segment.end_time}`} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="text-sm font-mono text-emerald-900 dark:text-emerald-50">
-                            {segment.start_time.toFixed(3)}s → {segment.end_time.toFixed(3)}s
-                            <span className="text-xs text-emerald-900/70 dark:text-emerald-200/70">
-                              {' '}
-                              (dur. {segment.duration.toFixed(3)}s)
-                            </span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopySegment(segment, index)}
-                            className="border-emerald-300/70 text-emerald-900 hover:bg-emerald-50 dark:border-emerald-400/30 dark:text-emerald-100"
-                          >
-                            <Copy className="mr-2 h-4 w-4" />
-                            {copiedIndex === index ? 'Copied!' : 'Copy JSON'}
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
             </>
           )}
         </CardContent>

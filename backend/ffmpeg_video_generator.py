@@ -39,19 +39,19 @@ class FFmpegVideoGenerator:
 
         # Font settings
         self.arabic_font_name = "KFGQPC Uthmanic Script HAFS"
-        self.spanish_font_name = "Arial"
+        self.translation_font_name = "Arial"
         self.verse_number_font_name = "Arial"
         self.surah_info_font_name = "Arial"
         self.watermark_font_name = "Verdana"
         
         # Font sizes
         self.arabic_font_size = 120
-        self.spanish_font_size = 50
+        self.translation_font_size = 50
         self.verse_number_font_size = 35
         self.surah_info_font_size = 45
         self.watermark_font_size = 28
 
-        self.watermark_text = "@Regreso.al.Islam"
+        self.watermark_text = ""
 
         # Create directories
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -69,13 +69,13 @@ class FFmpegVideoGenerator:
                 "orientation": "vertical",
                 "font_sizes": {
                     "arabic": 120,
-                    "spanish": 50,
+                    "translation": 50,
                     "surah_info": 45,
                     "watermark": 28,
                 },
                 "margins": {
                     "arabic": 1080,
-                    "spanish": 880,
+                    "translation": 880,
                     "surah_info": 420,
                     "watermark": 490,
                 },
@@ -91,13 +91,13 @@ class FFmpegVideoGenerator:
                 "orientation": "horizontal",
                 "font_sizes": {
                     "arabic": 96,
-                    "spanish": 44,
+                    "translation": 44,
                     "surah_info": 36,
                     "watermark": 24,
                 },
                 "margins": {
                     "arabic": 600,
-                    "spanish": 520,
+                    "translation": 520,
                     "surah_info": 220,
                     "watermark": 260,
                 },
@@ -123,6 +123,7 @@ class FFmpegVideoGenerator:
         output_path,
         surah_reference=None,
         profile=None,
+        watermark_text=None,
     ):
         """
         Create an ASS subtitle file from subtitle data.
@@ -145,7 +146,7 @@ class FFmpegVideoGenerator:
         margins = profile.get("margins", {})
 
         arabic_font_size = font_sizes.get("arabic", self.arabic_font_size)
-        spanish_font_size = font_sizes.get("spanish", self.spanish_font_size)
+        translation_font_size = font_sizes.get("translation", self.translation_font_size)
         surah_font_size = font_sizes.get("surah_info", self.surah_info_font_size)
         watermark_font_size = font_sizes.get("watermark", self.watermark_font_size)
 
@@ -154,14 +155,14 @@ class FFmpegVideoGenerator:
             return margins.get(key, fallback_value)
 
         arabic_margin_v = _margin("arabic", 0.56)
-        spanish_margin_v = _margin("spanish", 0.46)
+        translation_margin_v = _margin("translation", 0.46)
         surah_margin_v = _margin("surah_info", 0.22)
         watermark_margin_v = _margin("watermark", 0.26)
 
         language_gap_lines = profile.get("language_gap_lines")
         if language_gap_lines is None:
-            vertical_gap_px = max(arabic_margin_v - spanish_margin_v, 0)
-            approx_gap_lines = round(vertical_gap_px / max(spanish_font_size, 1))
+            vertical_gap_px = max(arabic_margin_v - translation_margin_v, 0)
+            approx_gap_lines = round(vertical_gap_px / max(translation_font_size, 1))
             language_gap_lines = max(approx_gap_lines - 1, 0)
         else:
             try:
@@ -180,7 +181,7 @@ WrapStyle: 0
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Arabic,{self.arabic_font_name},{arabic_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,80,80,{arabic_margin_v},1
-Style: Spanish,{self.spanish_font_name},{spanish_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,80,80,{spanish_margin_v},1
+Style: Translation,{self.translation_font_name},{translation_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,80,80,{translation_margin_v},1
 Style: SurahInfo,{self.surah_info_font_name},{surah_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,2,0,2,120,120,{surah_margin_v},1
 Style: Watermark,{self.watermark_font_name},{watermark_font_size},&H55FFFFFF,&H330000FF,&H33000000,&H00000000,0,0,0,0,100,100,0.5,0,1,2,0,2,140,140,{watermark_margin_v},1
 
@@ -198,7 +199,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             start_time = subtitle["start_time"]
             end_time = subtitle["end_time"]
             arabic_text = subtitle["arabic_text"]
-            spanish_text = subtitle["spanish_text"]
+            translated_text = subtitle["translated_text"]
 
             if timeline_start is None or start_time < timeline_start:
                 timeline_start = start_time
@@ -212,7 +213,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             # Escape special characters in text
             arabic_text = arabic_text.replace("\n", "\\N")
             arabic_text = self._normalize_quranic_stop_marks(arabic_text)
-            spanish_text = spanish_text.replace("\n", "\\N")
+            translated_text = translated_text.replace("\n", "\\N")
 
             # Add verse number to the end of text
             if verse:
@@ -223,23 +224,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 else:
                     arabic_with_verse = arabic_text
 
-                # For Spanish: add verse number in parentheses
-                spanish_with_verse = f"{spanish_text} ({verse})"
+                # For translation: add verse number in parentheses
+                translated_with_verse = f"{translated_text} ({verse})"
             else:
                 arabic_with_verse = arabic_text
-                spanish_with_verse = spanish_text
+                translated_with_verse = translated_text
 
             fade_tag = f"{{\\fad({self.fade_in_ms},{self.fade_out_ms})}}"
 
             bilingual_text = arabic_with_verse
-            if spanish_with_verse.strip():
+            if translated_with_verse.strip():
                 bilingual_text += (
-                    f"{gap_between_languages}{{\\rSpanish}}{spanish_with_verse}"
+                    f"{gap_between_languages}{{\\rTranslation}}{translated_with_verse}"
                 )
 
             # Stack both languages in a single dialogue to keep relative order stable
             ass_content += (
-                f"Dialogue: 0,{start_ass},{end_ass},Arabic,,0,0,{spanish_margin_v},,"
+                f"Dialogue: 0,{start_ass},{end_ass},Arabic,,0,0,{translation_margin_v},,"
                 f"{fade_tag}{bilingual_text}\n"
             )
 
@@ -257,13 +258,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     f"{fade_tag}{clean_surah_reference}\n"
                 )
 
-        if self.watermark_text:
-            watermark_text = self.watermark_text.strip()
-            if watermark_text:
+        effective_watermark = watermark_text if watermark_text is not None else self.watermark_text
+        if effective_watermark:
+            effective_watermark = effective_watermark.strip()
+            if effective_watermark:
                 fade_tag = f"{{\\fad({self.fade_in_ms},{self.fade_out_ms})}}"
                 ass_content += (
                     f"Dialogue: 0,{start_ass},{end_ass},Watermark,,0,0,0,,"
-                    f"{fade_tag}{watermark_text}\n"
+                    f"{fade_tag}{effective_watermark}\n"
                 )
 
         # Write ASS file
@@ -306,6 +308,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         surah_reference=None,
         trim_end_seconds=0.0,
         profile_name=None,
+        watermark_text=None,
     ):
         """
         Generate a complete video with subtitles and audio using FFmpeg.
@@ -330,6 +333,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             ass_path,
             surah_reference=surah_reference,
             profile=profile,
+            watermark_text=watermark_text,
         )
         print(f"✓ Created ASS subtitle file: {ass_path}")
 
@@ -441,13 +445,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         except (TypeError, ValueError):
             return None
 
-    def create_test_frame(self, arabic_text, spanish_text, verse_number=None, profile_name=None):
+    def create_test_frame(self, arabic_text, translated_text, verse_number=None, profile_name=None):
         """
         Create a test frame image to verify rendering.
 
         Args:
             arabic_text (str): Arabic text
-            spanish_text (str): Spanish text
+            translated_text (str): Translated text
             verse_number (int, optional): Verse number to display
 
         Returns:
@@ -459,7 +463,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             "start_time": 0,
             "end_time": 1,
             "arabic_text": arabic_text,
-            "spanish_text": spanish_text,
+            "translated_text": translated_text,
         }]
 
         # Create ASS file
@@ -507,14 +511,14 @@ def test_ffmpeg_generator():
             "start_time": 0,
             "end_time": 5,
             "arabic_text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-            "spanish_text": "En el nombre de Allah, el Compasivo, el Misericordioso",
+            "translated_text": "En el nombre de Allah, el Compasivo, el Misericordioso",
         },
         {
             "verse": 2,
             "start_time": 5,
             "end_time": 10,
             "arabic_text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
-            "spanish_text": "Alabado sea Allah, Señor de los mundos",
+            "translated_text": "Alabado sea Allah, Señor de los mundos",
         },
     ]
 
@@ -530,7 +534,7 @@ def test_ffmpeg_generator():
     # Test frame generation
     frame_path = generator.create_test_frame(
         arabic_text="بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-        spanish_text="En el nombre de Allah, el Compasivo, el Misericordioso",
+        translated_text="En el nombre de Allah, el Compasivo, el Misericordioso",
         verse_number=1
     )
     print(f"Test frame created: {frame_path}")

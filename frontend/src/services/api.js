@@ -62,12 +62,12 @@ export const videoAPI = {
   /**
    * Test Arabic text rendering
    * @param {string} arabicText - Arabic text to test
-   * @param {string} spanishText - Spanish text to test
+   * @param {string} translatedText - Translated text to test
    */
-  testArabicRendering: async (arabicText, spanishText) => {
+  testArabicRendering: async (arabicText, translatedText) => {
     const response = await api.post('/test-arabic', {
       arabic_text: arabicText,
-      spanish_text: spanishText,
+      translated_text: translatedText,
     });
     return response.data;
   },

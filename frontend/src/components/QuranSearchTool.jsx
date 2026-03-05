@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { BookOpenCheck, Copy, Info, Loader2, Search } from "lucide-react";
+import { BookOpenCheck, Copy, Globe, Info, Loader2, Search } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,6 +11,19 @@ import Button from "./ui/Button";
 import quranChapters from "@/data/quranChapters";
 import { getChapterVerses } from "@/services/quran";
 import usePersistentState from "@/hooks/usePersistentState";
+
+const TRANSLATION_EDITIONS = [
+  { value: "es.cortes", label: "Spanish (Julio Cortes)" },
+  { value: "en.sahih", label: "English (Saheeh International)" },
+  { value: "fr.hamidullah", label: "French (Muhammad Hamidullah)" },
+  { value: "tr.diyanet", label: "Turkish (Diyanet)" },
+  { value: "id.indonesian", label: "Indonesian" },
+  { value: "ur.jalandhry", label: "Urdu (Jalandhry)" },
+  { value: "de.aburida", label: "German (Abu Rida)" },
+  { value: "pt.elhayek", label: "Portuguese (El-Hayek)" },
+  { value: "ru.kuliev", label: "Russian (Kuliev)" },
+  { value: "it.piccardo", label: "Italian (Piccardo)" },
+];
 
 const clampNumber = (value, min, max) => {
   const numeric = Number(value) || min;
@@ -48,6 +61,10 @@ const QuranSearchTool = () => {
     "",
   );
   const [jsonCopied, setJsonCopied] = useState(false);
+  const [translationEdition, setTranslationEdition] = usePersistentState(
+    buildStorageKey("translationEdition"),
+    "es.cortes",
+  );
 
   const selectedChapterMeta = useMemo(
     () =>
@@ -76,7 +93,7 @@ const QuranSearchTool = () => {
     setJsonPayload("");
 
     try {
-      const allVerses = await getChapterVerses(selectedChapter);
+      const allVerses = await getChapterVerses(selectedChapter, translationEdition);
       if (!allVerses?.length) {
         setError("No verses found for this chapter.");
         return;
@@ -130,7 +147,7 @@ const QuranSearchTool = () => {
         arabic_text: verse.text,
         start_time: "",
         end_time: "",
-        spanish_text: verse.spanishText || "",
+        translated_text: verse.translatedText || "",
         show_verse_number: false,
       })),
     };
@@ -205,7 +222,7 @@ const QuranSearchTool = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Chapter</label>
             <select
@@ -246,6 +263,23 @@ const QuranSearchTool = () => {
               onChange={handleEndVerseChange}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-1">
+              <Globe className="h-3.5 w-3.5" />
+              Translation
+            </label>
+            <select
+              value={translationEdition}
+              onChange={(e) => setTranslationEdition(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {TRANSLATION_EDITIONS.map((edition) => (
+                <option key={edition.value} value={edition.value}>
+                  {edition.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -344,8 +378,8 @@ const QuranSearchTool = () => {
           <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
           <p>
             Use this helper to grab the authentic Arabic (Uthmani) text and
-            Spanish translation, then paste it into your subtitles JSON. You
-            will still need to provide timings when generating videos.
+            a translation in your chosen language, then paste it into your subtitles JSON.
+            You will still need to provide timings when generating videos.
           </p>
         </div>
       </CardContent>

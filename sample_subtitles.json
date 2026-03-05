@@ -6,35 +6,35 @@
       "start_time": 0,
       "end_time": 4,
       "arabic_text": "الم",
-      "spanish_text": "Alif, Lam, Mim"
+      "translated_text": "Alif, Lam, Mim"
     },
     {
       "verse": 2,
       "start_time": 4,
       "end_time": 10,
       "arabic_text": "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
-      "spanish_text": "Ese es el Libro sobre el cual no hay duda; es una guía para los piadosos"
+      "translated_text": "Ese es el Libro sobre el cual no hay duda; es una guía para los piadosos"
     },
     {
       "verse": 3,
       "start_time": 10,
       "end_time": 16,
       "arabic_text": "الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ",
-      "spanish_text": "Quienes creen en lo oculto, cumplen la oración y dan de lo que les hemos proveído"
+      "translated_text": "Quienes creen en lo oculto, cumplen la oración y dan de lo que les hemos proveído"
     },
     {
       "verse": 4,
       "start_time": 16,
       "end_time": 22,
       "arabic_text": "وَالَّذِينَ يُؤْمِنُونَ بِمَا أُنزِلَ إِلَيْكَ وَمَا أُنزِلَ مِن قَبْلِكَ وَبِالْآخِرَةِ هُمْ يُوقِنُونَ",
-      "spanish_text": "Y quienes creen en lo que se te reveló y en lo que se reveló antes de ti, y tienen certeza de la Otra Vida"
+      "translated_text": "Y quienes creen en lo que se te reveló y en lo que se reveló antes de ti, y tienen certeza de la Otra Vida"
     },
     {
       "verse": 5,
       "start_time": 22,
       "end_time": 28,
       "arabic_text": "أُولَٰئِكَ عَلَىٰ هُدًى مِّن رَّبِّهِمْ ۖ وَأُولَٰئِكَ هُمُ الْمُفْلِحُونَ",
-      "spanish_text": "Ellos están guiados por su Señor y son los que prosperan"
+      "translated_text": "Ellos están guiados por su Señor y son los que prosperan"
     }
   ]
 }

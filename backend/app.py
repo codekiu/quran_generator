@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import time
 import urllib.request
 from pathlib import Path
@@ -102,6 +103,7 @@ def _load_qpc_hafs_dataset():
         surah = entry.get("surah")
         ayah = entry.get("ayah")
         text = entry.get("text", "").strip()
+        text = re.sub(r'\s*[٠-٩]+\s*$', '', text)
         if not (surah and ayah and text):
             continue
 
@@ -114,7 +116,7 @@ def _load_qpc_hafs_dataset():
         ordered = dict(
             sorted(verses.items(), key=lambda item: int(item[0].split("_")[1]))
         )
-        structured[surah_number] = {"verse": ordered, "translation": {}}
+        structured[surah_number] = {"verse": ordered, "translations": {}}
 
     return structured
 
@@ -122,9 +124,9 @@ def _load_qpc_hafs_dataset():
 QURAN_SURAH_DATA = _load_qpc_hafs_dataset()
 
 
-def _fetch_spanish_translation(surah_number):
-    """Fetch Spanish (Julio Cortes) translation from alquran.cloud API."""
-    url = f"https://api.alquran.cloud/v1/surah/{surah_number}/es.cortes"
+def _fetch_translation(surah_number, edition="es.cortes"):
+    """Fetch a translation from alquran.cloud API."""
+    url = f"https://api.alquran.cloud/v1/surah/{surah_number}/{edition}"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "QuranGenerator/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -132,19 +134,19 @@ def _fetch_spanish_translation(surah_number):
         ayahs = api_data.get("data", {}).get("ayahs", [])
         return {f"verse_{a['numberInSurah']}": a.get("text", "") for a in ayahs}
     except Exception as e:
-        print(f"Warning: Could not fetch Spanish translation for surah {surah_number}: {e}")
+        print(f"Warning: Could not fetch translation ({edition}) for surah {surah_number}: {e}")
         return {}
 
 
-def get_surah_with_cache(chapter_number):
+def get_surah_with_cache(chapter_number, edition="es.cortes"):
     data = QURAN_SURAH_DATA.get(int(chapter_number))
     if data is None:
         raise ValueError(f"Surah {chapter_number} not found in qpc-hafs dataset")
 
-    if not data["translation"]:
-        data["translation"] = _fetch_spanish_translation(int(chapter_number))
+    if edition not in data["translations"]:
+        data["translations"][edition] = _fetch_translation(int(chapter_number), edition)
 
-    return data
+    return {"verse": data["verse"], "translation": data["translations"].get(edition, {})}
 
 
 @app.route("/api/quran/surah/<int:chapter_number>", methods=["GET"])
@@ -152,8 +154,10 @@ def get_quran_surah(chapter_number):
     if chapter_number < 1 or chapter_number > 114:
         return jsonify({"error": "Chapter number must be between 1 and 114."}), 400
 
+    edition = request.args.get("edition", "es.cortes")
+
     try:
-        data = get_surah_with_cache(chapter_number)
+        data = get_surah_with_cache(chapter_number, edition)
         return jsonify(data)
     except Exception as e:
         print(f"Error fetching surah {chapter_number}: {e}")
@@ -171,12 +175,13 @@ def health_check():
 @app.route("/api/generate-video", methods=["POST"])
 def generate_video():
     """
-    Generate a video with Arabic and Spanish subtitles.
+    Generate a video with Arabic and translated subtitles.
 
     Expected form data:
     - audio: Audio file (MP3, WAV, etc.)
     - subtitles: JSON file or JSON string with subtitle data
     - output_name: Optional custom output filename
+    - watermark_text: Optional channel name / watermark text
     """
     try:
         # Validate request
@@ -226,7 +231,7 @@ def generate_video():
             "start_time",
             "end_time",
             "arabic_text",
-            "spanish_text",
+            "translated_text",
         ]
         for subtitle in subtitles_data:
             for field in required_fields:
@@ -273,6 +278,8 @@ def generate_video():
                     return jsonify({"error": "trim_end_seconds must be non-negative"}), 400
             except (TypeError, ValueError):
                 return jsonify({"error": "Invalid trim_end_seconds value"}), 400
+
+        watermark_text = request.form.get("watermark_text", "")
 
         requested_profiles = _get_requested_profiles(
             request.form, video_generator.default_profile
@@ -321,6 +328,7 @@ def generate_video():
                 surah_reference=surah_reference,
                 trim_end_seconds=trim_value,
                 profile_name=profile_name,
+                watermark_text=watermark_text,
             )
 
             video_size = os.path.getsize(video_path)
@@ -708,14 +716,14 @@ def test_arabic_rendering():
 
     Expected JSON body:
     - arabic_text: Arabic text to test
-    - spanish_text: Spanish text to test
+    - translated_text: Translated text to test
     - verse_number: Optional verse number
     """
     try:
         data = request.get_json()
         arabic_text = data.get("arabic_text", "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")
-        spanish_text = data.get(
-            "spanish_text", "En el nombre de Allah, el Compasivo, el Misericordioso"
+        translated_text = data.get(
+            "translated_text", "En el nombre de Allah, el Compasivo, el Misericordioso"
         )
         verse_number = data.get("verse_number", 1)
 
@@ -723,7 +731,7 @@ def test_arabic_rendering():
         test_filename = "test_arabic_frame.png"
         frame_path = video_generator.create_test_frame(
             arabic_text=arabic_text,
-            spanish_text=spanish_text,
+            translated_text=translated_text,
             verse_number=verse_number
         )
 

@@ -16,21 +16,22 @@ const normalizeChapterPayload = (chapterNumber, payload) => {
       }
 
       const translationKey = `verse_${verse}`;
-      const spanish = translationEntries[translationKey] || '';
+      const translated = translationEntries[translationKey] || '';
 
       return {
         chapter: chapterNumber,
         verse,
         text: text.trim(),
-        spanishText: spanish.trim(),
+        translatedText: translated.trim(),
       };
     })
     .filter(Boolean)
     .sort((a, b) => a.verse - b.verse);
 };
 
-const fetchChapterData = async (chapterNumber) => {
-  const response = await fetch(`${SURAH_BASE_URL}/${padChapterNumber(chapterNumber)}`, {
+const fetchChapterData = async (chapterNumber, edition = 'es.cortes') => {
+  const url = `${SURAH_BASE_URL}/${padChapterNumber(chapterNumber)}?edition=${encodeURIComponent(edition)}`;
+  const response = await fetch(url, {
     headers: {
       'Cache-Control': 'no-cache',
     },
@@ -43,18 +44,19 @@ const fetchChapterData = async (chapterNumber) => {
   return response.json();
 };
 
-export const getChapterVerses = async (chapterNumber) => {
-  if (chapterCache.has(chapterNumber)) {
-    return chapterCache.get(chapterNumber);
+export const getChapterVerses = async (chapterNumber, edition = 'es.cortes') => {
+  const cacheKey = `${chapterNumber}:${edition}`;
+  if (chapterCache.has(cacheKey)) {
+    return chapterCache.get(cacheKey);
   }
 
-  const payload = await fetchChapterData(chapterNumber);
+  const payload = await fetchChapterData(chapterNumber, edition);
   const verses = normalizeChapterPayload(Number(chapterNumber), payload);
 
   if (!verses.length) {
     throw new Error('Unexpected Quran surah format.');
   }
 
-  chapterCache.set(chapterNumber, verses);
+  chapterCache.set(cacheKey, verses);
   return verses;
 };
