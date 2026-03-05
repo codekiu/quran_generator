@@ -60,13 +60,13 @@ mkdir -p uploads outputs temp backend/fonts
 cd backend
 
 # Create virtual environment
-if [ ! -d "venv" ]; then
+if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv venv
+    python3 -m venv .venv
 fi
 
 # Activate virtual environment
-source venv/bin/activate
+source .venv/bin/activate
 
 # Install dependencies
 echo "Installing Python dependencies..."
@@ -103,14 +103,14 @@ echo -e "${GREEN}✅ Installation complete!${NC}"
 echo ""
 echo "⚠️  IMPORTANT: Font Setup Required"
 echo "   Download KFGQPC Uthmanic Script HAFS font"
-echo "   Place it at: backend/fonts/UthmanicHafs.ttf"
+echo "   Place it at: backend/fonts/UthmanicHafs.otf"
 echo "   See: backend/fonts/README.md for details"
 echo ""
 echo "🚀 To start the application:"
 echo ""
 echo "   Terminal 1 (Backend):"
 echo "   $ cd backend"
-echo "   $ source venv/bin/activate"
+echo "   $ source .venv/bin/activate"
 echo "   $ python app.py"
 echo ""
 echo "   Terminal 2 (Frontend):"
@@ -120,8 +120,6 @@ echo ""
 echo "   Then open: http://localhost:3000"
 echo ""
 echo "📖 For more information:"
-echo "   - Quick start: QUICKSTART.md"
-echo "   - Full docs: README.md"
-echo "   - Technical: context.md"
+echo "   - Docs: README.md"
 echo ""
 echo "Happy video creating! 🎥📖"

@@ -5,7 +5,7 @@
 Place the **KFGQPC Uthmanic Script HAFS** font file here:
 
 ```
-UthmanicHafs.ttf
+UthmanicHafs.otf
 ```
 
 ## Where to Get the Font
@@ -32,10 +32,10 @@ Some alternatives:
 ## Configuration
 
 If you use a different font:
-1. Place the `.ttf` file in this directory
+1. Place the font file in this directory
 2. Update the `FONT_PATH` in `backend/.env`:
    ```
-   FONT_PATH=./fonts/YourFontName.ttf
+   FONT_PATH=./fonts/YourFontName.otf
    ```
 
 ## Font Requirements
@@ -43,7 +43,7 @@ If you use a different font:
 The font must:
 - Support Unicode Arabic characters (U+0600 to U+06FF)
 - Include tashkil/harakat marks
-- Be in TrueType (.ttf) format
+- Be in TrueType (.ttf) or OpenType (.otf) format
 - Have proper character shaping support
 
 ## Testing the Font
@@ -51,7 +51,7 @@ The font must:
 Once you've added the font, test it using the `/api/test-arabic` endpoint:
 
 ```bash
-curl -X POST http://localhost:5000/api/test-arabic \
+curl -X POST http://localhost:5001/api/test-arabic \
   -H "Content-Type: application/json" \
   -d '{"arabic_text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "spanish_text": "En el nombre de Allah"}'
 ```

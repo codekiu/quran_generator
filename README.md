@@ -1,282 +1,204 @@
 # Quran Video Generator
 
-A comprehensive tool for generating Instagram/TikTok videos featuring Quran recitations with synchronized Arabic and Spanish subtitles. Includes an audio editing tool for preparing recitation clips.
+Generate social media videos with Quran recitations featuring synchronized Arabic and Spanish subtitles. Supports TikTok/Reels (1080x1920) and YouTube (1920x1080) video profiles.
 
 ## Features
 
-### Video Generator
-- ✅ Black background videos with centered subtitles
-- ✅ Arabic text in **KFGQPC Uthmanic Script HAFS** font
-- ✅ Spanish translations below Arabic text
-- ✅ Fade in/out transitions between verses
-- ✅ Synchronized with Quran recitation audio
-- ✅ Support for tashkil (diacritical marks)
-- ✅ Proper RTL (right-to-left) text rendering
-- ✅ Video preview before download
-- ✅ Vertical format (1080x1920) for social media
-
-### Audio Editor
-- ✅ Visual waveform display
-- ✅ Precise audio trimming by time selection
-- ✅ Play/pause controls with seek functionality
-- ✅ Export trimmed audio segments
-- ✅ Support for long recitations (30+ minutes)
-- ✅ Region selection with drag and resize
+- **Video generation** with multiple profiles (TikTok 1080x1920, YouTube 1920x1080)
+- **Quran verse search** with Arabic text from QPC HAFS dataset and Spanish translations via alquran.cloud API
+- **Subtitle editor** with JSON preview and per-verse timing controls
+- **Audio editor** with waveform visualization, trimming, noise cleaning, and automatic timestamp detection
+- **Arabic text rendering** using KFGQPC Uthmanic Script HAFS font with proper RTL support and tashkil
+- Fade in/out transitions between verses
+- Watermark / channel name overlay support
+- Surah reference display on generated videos
 
 ## Tech Stack
 
 ### Backend
-- **Python 3.9+**: Core backend language
-- **FFmpeg**: Video generation engine
-- **Flask**: Web server for API endpoints
-- **arabic-reshaper**: Arabic character reshaping
-- **python-bidi**: Unicode bidirectional algorithm for RTL
-- **Pillow**: Image processing for text rendering
-- **pydub**: Audio processing
+- Python 3.9+, Flask, FFmpeg
+- arabic-reshaper, python-bidi, Pillow, pydub
 
 ### Frontend
-- **React 18**: Modern UI framework
-- **Vite**: Fast build tool
-- **TailwindCSS**: Utility-first CSS framework
-- **wavesurfer.js**: Audio waveform visualization
-- **Lucide React**: Icon library
-- **Axios**: HTTP client
+- React 18, Vite, TailwindCSS
+- wavesurfer.js, Axios, Lucide React
 
 ## Prerequisites
 
-### System Requirements
-- macOS (or Linux/Windows with adjustments)
-- Python 3.9 or higher
-- Node.js 18 or higher
-- FFmpeg installed via Homebrew
-- Homebrew package manager (macOS)
+- Python 3.9+
+- Node.js 18+
+- FFmpeg (`brew install ffmpeg`)
 
-### Install FFmpeg
-```bash
-brew install ffmpeg
-```
+## Quick Start
 
-### Font Installation
-You need the **KFGQPC Uthmanic Script HAFS** font. Place it in:
-```
-backend/fonts/UthmanicHafs.ttf
-```
+You can use the automated installer or set up manually.
 
-Or install it system-wide on macOS.
-
-## Installation
-
-### 1. Clone the Repository
-```bash
-cd /Users/lynx/codekiu/quran_generator
-```
-
-### 2. Backend Setup
+### Automated
 
 ```bash
+bash INSTALL.sh
+```
+
+### Manual
+
+```bash
+# Backend
 cd backend
-
-# Create virtual environment
-python3 -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate  # macOS/Linux
-# or
-venv\Scripts\activate  # Windows
-
-# Install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-
-# Copy environment file
 cp .env.example .env
 
-# Edit .env and configure paths if needed
-```
-
-### 3. Frontend Setup
-
-```bash
+# Frontend
 cd ../frontend
-
-# Install dependencies
 npm install
 ```
 
-## Running the Application
+### Running
 
-### Start Backend Server (Terminal 1)
 ```bash
+# Terminal 1 — Backend (port 5001)
 cd backend
-source venv/bin/activate
+source .venv/bin/activate
 python app.py
-```
 
-The backend API will run on `http://localhost:5000`
-
-### Start Frontend Development Server (Terminal 2)
-```bash
+# Terminal 2 — Frontend (port 3000)
 cd frontend
 npm run dev
 ```
 
-The frontend will run on `http://localhost:3000`
+Open http://localhost:3000
 
 ## Usage
 
-### 1. Audio Editing
-1. Click on the **Audio Editor** tab
-2. Upload your Quran recitation audio file (MP3, WAV, etc.)
-3. Use the waveform to select the region you want to keep
-   - Click "Select Region" to create a selection
-   - Drag the edges to adjust the selection
-4. Click **Trim Audio** to process
-5. Download the trimmed audio file
+The app uses a 3-step workflow:
 
-### 2. Video Generation
-1. Click on the **Video Generator** tab
-2. Upload your audio file (use the trimmed file from step 1)
-3. Provide subtitles in JSON format:
+1. **Verses** — Search and select Quran verses by surah. Arabic text is loaded from the local QPC HAFS dataset; translations are fetched from alquran.cloud.
+2. **Subtitles** — Review and edit subtitle timing, Arabic text, and translations. Adjust start/end times per verse.
+3. **Generate** — Upload audio, select video profiles (TikTok, YouTube, or both), optionally add a watermark, and generate the video.
+
+## Subtitle JSON Format
 
 ```json
-[
-  {
-    "verse": 1,
-    "start_time": 0,
-    "end_time": 5,
-    "arabic_text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-    "spanish_text": "En el nombre de Allah, el Compasivo, el Misericordioso"
-  },
-  {
-    "verse": 2,
-    "start_time": 5,
-    "end_time": 10,
-    "arabic_text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
-    "spanish_text": "Alabado sea Allah, Señor de los mundos"
-  }
-]
+{
+  "surah_reference": "Al-Baqarah - Ayat 1-5",
+  "subtitles": [
+    {
+      "verse": 1,
+      "start_time": 0,
+      "end_time": 4,
+      "arabic_text": "الم",
+      "translated_text": "Alif, Lam, Mim"
+    },
+    {
+      "verse": 2,
+      "start_time": 4,
+      "end_time": 10,
+      "arabic_text": "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
+      "translated_text": "Ese es el Libro sobre el cual no hay duda; es una guia para los piadosos"
+    }
+  ]
+}
 ```
 
-4. Click **Load Sample** to see an example
-5. Customize the output filename if desired
-6. Click **Generate Video**
-7. Wait for processing (may take a few minutes)
-8. Preview the video in the browser
-9. Download the final video
-
-## JSON Subtitle Format
-
-Each subtitle object requires:
-- `verse` (number): Verse number
-- `start_time` (number): Start time in seconds
-- `end_time` (number): End time in seconds
-- `arabic_text` (string): Arabic text with tashkil
-- `spanish_text` (string): Spanish translation
+Each subtitle requires: `verse`, `start_time`, `end_time`, `arabic_text`, `translated_text`.
 
 ## API Endpoints
 
-### Video Generation
-- `POST /api/generate-video` - Generate video
-- `GET /api/video/:filename` - Download video
-- `POST /api/test-arabic` - Test Arabic rendering
+### Quran
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/quran/surah/:chapter_number` | Get surah Arabic text + translation |
 
-### Audio Processing
-- `POST /api/audio/info` - Get audio metadata
-- `POST /api/audio/trim` - Trim audio file
-- `GET /api/audio/:filename` - Download audio
-- `POST /api/audio/waveform` - Get waveform data
+### Video
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/generate-video` | Generate video with subtitles and audio |
+| GET | `/api/video/:filename` | Download generated video |
 
-### Health Check
-- `GET /api/health` - API health status
+### Audio
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/audio/info` | Get audio file metadata |
+| POST | `/api/audio/trim` | Trim audio by time range |
+| GET | `/api/audio/:filename` | Download processed audio |
+| POST | `/api/audio/timestamps` | Detect voice segments via silence detection |
+| POST | `/api/audio/waveform` | Get waveform data for visualization |
+| POST | `/api/audio/clean` | Clean audio (noise reduction, EQ, normalization) |
+
+### Utility
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check |
+| POST | `/api/test-arabic` | Test Arabic text rendering (returns image) |
+| GET | `/api/image/:filename` | Download generated image |
 
 ## Project Structure
 
 ```
 quran_generator/
 ├── backend/
-│   ├── app.py              # Flask server
-│   ├── video_generator.py  # Video generation logic
-│   ├── audio_editor.py     # Audio processing
-│   ├── requirements.txt    # Python dependencies
-│   ├── .env.example        # Environment template
-│   └── fonts/             # Arabic fonts directory
+│   ├── app.py                    # Flask server and API routes
+│   ├── ffmpeg_video_generator.py # Video generation with FFmpeg
+│   ├── video_generator.py        # Video generation utilities
+│   ├── audio_editor.py           # Audio processing (trim, clean, waveform, timestamps)
+│   ├── requirements.txt          # Python dependencies
+│   ├── .env.example              # Environment variable template
+│   └── fonts/
+│       ├── UthmanicHafs.otf      # Primary Arabic font
+│       └── ScheherazadeNew-Regular.ttf
 ├── frontend/
 │   ├── src/
-│   │   ├── components/    # React components
-│   │   │   ├── VideoGenerator.jsx
-│   │   │   ├── AudioEditor.jsx
-│   │   │   └── ui/       # UI components
-│   │   ├── services/      # API services
-│   │   ├── lib/          # Utilities
-│   │   ├── App.jsx       # Main app
-│   │   └── main.jsx      # Entry point
-│   ├── package.json
+│   │   ├── App.jsx               # Main app with 3-step workflow
+│   │   ├── main.jsx              # Entry point
+│   │   ├── components/
+│   │   │   ├── QuranSearchTool.jsx  # Surah search and verse selection
+│   │   │   ├── SubtitleEditor.jsx   # Subtitle timing and text editor
+│   │   │   ├── VideoGenerator.jsx   # Video generation controls
+│   │   │   ├── AudioEditor.jsx      # Audio waveform editor
+│   │   │   ├── TimestampHelper.jsx  # Automatic timestamp detection
+│   │   │   └── ui/                  # Reusable UI components
+│   │   ├── data/
+│   │   │   └── quranChapters.js     # Surah metadata (names, verse counts)
+│   │   ├── hooks/
+│   │   │   └── usePersistentState.js # localStorage-backed state hook
+│   │   ├── services/
+│   │   │   ├── api.js               # Backend API client
+│   │   │   └── quran.js             # Quran API service
+│   │   └── lib/
+│   │       └── utils.js             # Utility functions
 │   ├── vite.config.js
-│   └── tailwind.config.js
-├── uploads/               # Temporary file storage
-├── outputs/               # Generated videos
-├── temp/                 # Temporary processing files
-├── context.md            # Project context
-├── tasks.md              # Task tracking
-├── progress.md           # Development progress
-└── README.md            # This file
+│   ├── tailwind.config.js
+│   └── package.json
+├── qpc-hafs.json                 # QPC HAFS Arabic text dataset
+├── sample_subtitles.json         # Example subtitle file
+├── INSTALL.sh                    # Automated installation script
+├── uploads/                      # Uploaded files (gitignored)
+├── outputs/                      # Generated videos (gitignored)
+└── temp/                         # Temporary processing files (gitignored)
 ```
+
+## Configuration
+
+Backend environment variables (`backend/.env`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FLASK_ENV` | `development` | Flask environment |
+| `FLASK_PORT` | `5001` | Backend server port |
+| `UPLOAD_FOLDER` | `../uploads` | Upload directory |
+| `OUTPUT_FOLDER` | `../outputs` | Output directory |
+| `FONT_PATH` | `./fonts/UthmanicHafs.otf` | Path to Arabic font |
 
 ## Troubleshooting
 
-### FFmpeg Not Found
-```bash
-# Install FFmpeg
-brew install ffmpeg
+**FFmpeg not found** — Install with `brew install ffmpeg` and verify with `ffmpeg -version`.
 
-# Verify installation
-ffmpeg -version
-```
+**Arabic text not rendering** — Ensure `backend/fonts/UthmanicHafs.otf` exists (note: `.otf`, not `.ttf`). Update `FONT_PATH` in `.env` if using a different font.
 
-### Font Issues
-If Arabic text doesn't render correctly:
-1. Ensure the font file is in `backend/fonts/UthmanicHafs.ttf`
-2. Update `FONT_PATH` in `.env`
-3. Verify the font supports Arabic script and tashkil
+**Port conflicts** — Backend defaults to port 5001 (`FLASK_PORT` in `.env`). Frontend runs on port 3000 and proxies `/api` requests to the backend.
 
-### Audio Loading Errors
-- Ensure audio file is in a supported format (MP3, WAV, OGG, M4A)
-- Check file size (max 500MB)
-- Verify pydub is installed correctly
-
-### Video Generation Slow
-- Video generation can take 1-2 minutes for a 30-second clip
-- Processing time depends on the number of verses and system performance
-- Consider using shorter audio clips for testing
-
-### CORS Issues
-If frontend can't connect to backend:
-1. Ensure backend is running on port 5000
-2. Check Vite proxy configuration in `vite.config.js`
-3. Verify Flask-CORS is installed
-
-## Building for Production
-
-### Frontend Build
-```bash
-cd frontend
-npm run build
-```
-
-The built files will be in `frontend/dist/`
-
-### Backend Production
-Consider using:
-- **Gunicorn** for Python WSGI server
-- **Nginx** for reverse proxy
-- **Docker** for containerization
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+**CORS issues** — The Vite dev server proxies API requests to the backend. Ensure both servers are running and the proxy target in `vite.config.js` matches `FLASK_PORT`.
 
 ## License
 
@@ -284,18 +206,8 @@ This project is for educational and personal use.
 
 ## Acknowledgments
 
-- FFmpeg for powerful video processing
+- FFmpeg for video processing
 - arabic-reshaper for Arabic text rendering
 - WaveSurfer.js for audio visualization
-- React and TailwindCSS communities
-
-## Support
-
-For issues or questions:
-1. Check the troubleshooting section
-2. Review `context.md` for technical details
-3. Check `tasks.md` for known issues
-
----
-
-**Made with ❤️ for the Muslim community**
+- alquran.cloud for Quran translation API
+- KFGQPC for the Uthmanic Script HAFS font
