@@ -1,0 +1,13 @@
+.git
+node_modules
+dist
+__pycache__
+.venv
+backend/venv
+uploads/
+outputs/
+temp/
+*.md
+LICENSE
+sample_subtitles.json
+INSTALL.sh

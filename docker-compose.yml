@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: quran-backend
+    environment:
+      - UPLOAD_FOLDER=../uploads
+      - OUTPUT_FOLDER=../outputs
+      - TEMP_FOLDER=../temp
+      - FONT_PATH=./fonts/UthmanicHafs.otf
+      - QPC_HAFS_PATH=/app/qpc-hafs.json
+      - FLASK_PORT=5001
+    volumes:
+      - uploads_data:/app/uploads
+      - outputs_data:/app/outputs
+      - temp_data:/app/temp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: quran-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  uploads_data:
+  outputs_data:
+  temp_data:

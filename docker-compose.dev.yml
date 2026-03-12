@@ -1,0 +1,25 @@
+services:
+  backend:
+    volumes:
+      - ./backend:/app/backend
+      - ./qpc-hafs.json:/app/qpc-hafs.json
+      - uploads_data:/app/uploads
+      - outputs_data:/app/outputs
+      - temp_data:/app/temp
+    environment:
+      - FLASK_ENV=development
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+    environment:
+      - VITE_API_URL=http://backend:5001
+    ports:
+      - "3000:3000"

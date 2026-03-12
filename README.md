@@ -27,15 +27,51 @@ Generate social media videos with Quran recitations featuring synchronized Arabi
 - React 18, Vite, TailwindCSS
 - wavesurfer.js, Axios, Lucide React
 
-## Prerequisites
+## Quick Start (Docker)
+
+The fastest way to run the project — just needs [Docker](https://docs.docker.com/get-docker/):
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost — that's it. The frontend (nginx) serves the app and proxies API requests to the backend.
+
+### Dev Mode (Hot-Reloading)
+
+For contributors — edits to source files reload automatically:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+Open http://localhost:3000 (Vite dev server). Backend auto-reloads on Python file changes.
+
+### Makefile Shortcuts
+
+| Command | Description |
+|---------|-------------|
+| `make up` | Start production containers (detached) |
+| `make down` | Stop all containers |
+| `make dev` | Start dev containers with hot-reloading |
+| `make build` | Build containers without starting |
+| `make clean` | Stop containers, remove volumes and orphans |
+| `make logs` | Tail container logs |
+| `make local-backend` | Run backend locally (requires venv) |
+| `make local-frontend` | Run frontend locally |
+
+---
+
+## Manual Setup
+
+<details>
+<summary>Set up without Docker (click to expand)</summary>
+
+### Prerequisites
 
 - Python 3.9+
 - Node.js 18+
 - FFmpeg (`brew install ffmpeg`)
-
-## Quick Start
-
-You can use the automated installer or set up manually.
 
 ### Automated
 
@@ -73,6 +109,8 @@ npm run dev
 
 Open http://localhost:3000
 
+</details>
+
 ## Usage
 
 The app uses a 3-step workflow:
@@ -92,20 +130,22 @@ The app uses a 3-step workflow:
       "start_time": 0,
       "end_time": 4,
       "arabic_text": "الم",
-      "translated_text": "Alif, Lam, Mim"
+      "translated_text": "Alif, Lam, Mim",
+      "show_verse_number": true
     },
     {
       "verse": 2,
       "start_time": 4,
       "end_time": 10,
       "arabic_text": "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
-      "translated_text": "Ese es el Libro sobre el cual no hay duda; es una guia para los piadosos"
+      "translated_text": "Ese es el Libro sobre el cual no hay duda; es una guia para los piadosos",
+      "show_verse_number": false
     }
   ]
 }
 ```
 
-Each subtitle requires: `verse`, `start_time`, `end_time`, `arabic_text`, `translated_text`.
+Each subtitle requires: `verse`, `start_time`, `end_time`, `arabic_text`, `translated_text`. Optional: `show_verse_number` (boolean, defaults to `true`) — when enabled, appends the verse number in Arabic-Indic numerals to the Arabic text and in parentheses to the translation in the generated video.
 
 ## API Endpoints
 
@@ -144,10 +184,10 @@ quran_generator/
 ├── backend/
 │   ├── app.py                    # Flask server and API routes
 │   ├── ffmpeg_video_generator.py # Video generation with FFmpeg
-│   ├── video_generator.py        # Video generation utilities
 │   ├── audio_editor.py           # Audio processing (trim, clean, waveform, timestamps)
 │   ├── requirements.txt          # Python dependencies
 │   ├── .env.example              # Environment variable template
+│   ├── Dockerfile                # Backend production container
 │   └── fonts/
 │       ├── UthmanicHafs.otf      # Primary Arabic font
 │       └── ScheherazadeNew-Regular.ttf
@@ -173,7 +213,13 @@ quran_generator/
 │   │       └── utils.js             # Utility functions
 │   ├── vite.config.js
 │   ├── tailwind.config.js
-│   └── package.json
+│   ├── package.json
+│   ├── Dockerfile                # Frontend production container (nginx)
+│   ├── Dockerfile.dev            # Frontend dev container (Vite hot-reload)
+│   └── nginx.conf                # Production nginx config
+├── docker-compose.yml            # Production Docker setup
+├── docker-compose.dev.yml        # Dev overrides (hot-reloading)
+├── Makefile                      # Convenience commands
 ├── qpc-hafs.json                 # QPC HAFS Arabic text dataset
 ├── sample_subtitles.json         # Example subtitle file
 ├── INSTALL.sh                    # Automated installation script
@@ -192,7 +238,9 @@ Backend environment variables (`backend/.env`):
 | `FLASK_PORT` | `5001` | Backend server port |
 | `UPLOAD_FOLDER` | `../uploads` | Upload directory |
 | `OUTPUT_FOLDER` | `../outputs` | Output directory |
+| `TEMP_FOLDER` | `../temp` | Temporary processing directory |
 | `FONT_PATH` | `./fonts/UthmanicHafs.otf` | Path to Arabic font |
+| `QPC_HAFS_PATH` | `../qpc-hafs.json` | Path to QPC HAFS dataset |
 
 ## Troubleshooting
 
@@ -203,6 +251,10 @@ Backend environment variables (`backend/.env`):
 **Port conflicts** — Backend defaults to port 5001 (`FLASK_PORT` in `.env`). Frontend runs on port 3000 and proxies `/api` requests to the backend.
 
 **CORS issues** — The Vite dev server proxies API requests to the backend. Ensure both servers are running and the proxy target in `vite.config.js` matches `FLASK_PORT`.
+
+**Docker: backend unhealthy** — Run `docker compose logs backend` to check for startup errors. The health check hits `/api/health` — if it fails, the frontend container won't start (`depends_on: condition: service_healthy`).
+
+**Docker: old code running** — Rebuild with `docker compose up --build` or `make clean && make up` to clear cached layers.
 
 ## License
 

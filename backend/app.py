@@ -20,7 +20,7 @@ CORS(app)
 # Configuration
 UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "../uploads")
 OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER", "../outputs")
-TEMP_FOLDER = "../temp"
+TEMP_FOLDER = os.getenv("TEMP_FOLDER", "../temp")
 FONT_PATH = os.getenv("FONT_PATH", "./fonts/UthmanicHafs.otf")
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 DEFAULT_QPC_HAFS_PATH = Path(__file__).resolve().parent.parent / "qpc-hafs.json"

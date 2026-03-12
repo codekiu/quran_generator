@@ -19,5 +19,8 @@ dist/
 .idea/
 *.swp
 
+# Docker
+docker-compose.override.yml
+
 # OS
 .DS_Store
